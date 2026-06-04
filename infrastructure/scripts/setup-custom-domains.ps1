@@ -3,8 +3,17 @@
     Prepares DNS records for custom domains for ChurchTool Billing Tool.
 
 .DESCRIPTION
-    This script retrieves the necessary information from Azure resources (Static Web App and Function App)
-    and generates the DNS records needed to configure custom domains for both frontend and backend.
+    This script retrieves the necessary information from Azure resources and generates the DNS records 
+    needed to configure custom domains for both frontend and backend.
+    
+    **IMPORTANT**: This script is designed for Azure Static Web Apps. If using Blob Storage Static Website,
+    you need to configure Azure CDN first and use the CDN endpoint instead of the Static Web App hostname.
+    
+    For Blob Storage + CDN setup:
+    1. Create Storage Account with Static Website enabled
+    2. Create Azure CDN profile and endpoint pointing to the storage static website
+    3. Use this script with -FrontendResourceName pointing to your CDN profile (needs adaptation)
+    4. OR manually configure DNS records pointing to the CDN endpoint
     
     It can either:
     1. Output the DNS records for manual configuration in your DNS provider

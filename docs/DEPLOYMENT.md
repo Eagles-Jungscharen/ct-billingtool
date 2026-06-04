@@ -8,9 +8,10 @@ This document outlines the deployment process for the ChurchTool Billing Tool to
 
 The application will be deployed to Azure with the following components:
 
-- **Frontend**: Azure Static Web Apps or Azure App Service
-- **Backend**: Azure Functions (Consumption or Premium plan)
-- **Storage**: Azure Storage Account (Table Storage)
+- **Frontend**: Azure Blob Storage Static Website
+- **Backend**: Azure Functions (Consumption or Flex Consumption plan)
+- **Storage**: Azure Storage Account (Table Storage for data)
+- **CDN**: Azure CDN (for custom domain and HTTPS on frontend)
 - **Monitoring**: Application Insights
 - **Authentication**: ChurchTool IDP (external service)
 
@@ -99,18 +100,50 @@ az functionapp create \
   --os-type Linux
 ```
 
-#### Static Web App (Frontend)
+#### Storage Account (Frontend)
+
+Create a separate storage account for frontend static website hosting:
 
 ```bash
-az staticwebapp create \
-  --name swa-ct-billingtool-frontend \
+az storage account create \
+  --name stctbillingtoolfrontend \
   --resource-group rg-ct-billingtool \
   --location westeurope \
-  --source https://github.com/C_EaglesJungscharen/ct-billingtool \
-  --branch main \
-  --app-location "/packages/frontend" \
-  --api-location "" \
-  --output-location "dist"
+  --sku Standard_LRS \
+  --kind StorageV2 \
+  --allow-blob-public-access true
+```
+
+Enable static website hosting:
+
+```bash
+az storage blob service-properties update \
+  --account-name stctbillingtoolfrontend \
+  --static-website \
+  --index-document index.html \
+  --404-document index.html
+```
+
+The static website endpoint will be: `https://stctbillingtoolfrontend.z6.web.core.windows.net`
+
+#### Azure CDN (Optional, for Custom Domain)
+
+If you need custom domain and HTTPS:
+
+```bash
+# Create CDN profile
+az cdn profile create \
+  --name cdn-ct-billingtool \
+  --resource-group rg-ct-billingtool \
+  --sku Standard_Microsoft
+
+# Create CDN endpoint
+az cdn endpoint create \
+  --name billing-feg-effretikon \
+  --profile-name cdn-ct-billingtool \
+  --resource-group rg-ct-billingtool \
+  --origin stctbillingtoolfrontend.z6.web.core.windows.net \
+  --origin-host-header stctbillingtoolfrontend.z6.web.core.windows.net
 ```
 
 ### 2. Configure Environment Variables
@@ -136,20 +169,18 @@ az functionapp config appsettings set \
     "CHURCHTOOL_ADMIN_GROUP_ID=<admin-group-id>"
 ```
 
-#### Frontend (Static Web App)
+#### Frontend (Build-time Environment Variables)
 
-Configure environment variables in Azure Portal or via API:
+Frontend environment variables are compiled into the build at build time. Create `.env.production` in `packages/frontend`:
 
-```bash
-az staticwebapp appsettings set \
-  --name swa-ct-billingtool-frontend \
-  --resource-group rg-ct-billingtool \
-  --setting-names \
-    "VITE_OIDC_AUTHORITY=<oidc-authority>" \
-    "VITE_OIDC_CLIENT_ID=<client-id>" \
-    "VITE_OIDC_REDIRECT_URI=<redirect-uri>" \
-    "VITE_API_BASE_URL=<backend-url>"
+```env
+VITE_OIDC_AUTHORITY=https://authentication.acme.com/api/oidc
+VITE_OIDC_CLIENT_ID=your-client-id
+VITE_OIDC_REDIRECT_URI=https://billing.acme.com/auth/callback
+VITE_API_BASE_URL=https://api-billing.acme.com.ch
 ```
+
+**Note**: These values are baked into the JavaScript bundle at build time.
 
 ### 3. Build and Deploy
 
@@ -172,31 +203,94 @@ func azure functionapp publish func-ct-billingtool-backend
 # From monorepo root
 cd packages/frontend
 
-# Build for production
+# Build for production (uses .env.production)
 npm run build
 
-# Deploy to Static Web App (automatic via GitHub Actions)
-# Or manual deploy:
-az staticwebapp upload \
-  --name swa-ct-billingtool-frontend \
-  --resource-group rg-ct-billingtool \
-  --source ./dist
+# Upload to Blob Storage
+az storage blob upload-batch \
+  --account-name stctbillingtoolfrontend \
+  --source ./dist \
+  --destination '$web' \
+  --overwrite
 ```
+
+**Alternative: Using Azure Storage VS Code Extension**
+1. Install "Azure Storage" extension in VS Code
+2. Right-click on `dist` folder
+3. Select "Deploy to Static Website via Azure Storage"
 
 ### 4. Configure CORS
 
 Enable CORS on Azure Functions to allow frontend requests:
 
 ```bash
+# If using CDN with custom domain
 az functionapp cors add \
   --name func-ct-billingtool-backend \
   --resource-group rg-ct-billingtool \
-  --allowed-origins https://swa-ct-billingtool-frontend.azurestaticapps.net
+  --allowed-origins https://billing.acme.com
+
+# If using direct blob storage URL
+az functionapp cors add \
+  --name func-ct-billingtool-backend \
+  --resource-group rg-ct-billingtool \
+  --allowed-origins https://stctbillingtoolfrontend.z6.web.core.windows.net
 ```
 
-### 5. Verify Deployment
+### 5. Configure Custom Domain (Optional)
 
-1. Access frontend URL: `https://swa-ct-billingtool-frontend.azurestaticapps.net`
+#### Frontend Custom Domain via CDN
+
+```bash
+# Add custom domain to CDN endpoint
+az cdn custom-domain create \
+  --endpoint-name billing-acme \
+  --profile-name cdn-ct-billingtool \
+  --resource-group rg-ct-billingtool \
+  --name billing-acme-custom \
+  --hostname billing.acme.com
+
+# Enable HTTPS
+az cdn custom-domain enable-https \
+  --endpoint-name billing-acme \
+  --profile-name cdn-ct-billingtool \
+  --resource-group rg-ct-billingtool \
+  --name billing-acme-custom
+```
+
+**DNS Configuration Required:**
+Create a CNAME record in your DNS:
+- Name: `billing`
+- Value: `billing-acme.azureedge.net`
+
+#### Backend Custom Domain
+
+```bash
+# Add custom domain to Function App
+az functionapp config hostname add \
+  --webapp-name func-ct-billingtool-backend \
+  --resource-group rg-ct-billingtool \
+  --hostname api-billing.acme.com
+
+# Enable HTTPS (managed certificate)
+az functionapp config ssl bind \
+  --name func-ct-billingtool-backend \
+  --resource-group rg-ct-billingtool \
+  --certificate-thumbprint auto \
+  --ssl-type SNI
+```
+
+**DNS Configuration Required:**
+Create a CNAME record in your DNS:
+- Name: `api-billing`
+- Value: `func-ct-billingtool-backend.azurewebsites.net`
+
+### 6. Verify Deployment
+
+1. **Frontend URL**: 
+   - Direct: `https://stctbillingtoolfrontend.z6.web.core.windows.net`
+   - CDN: `https://billing-acme.azureedge.net`
+   - Custom domain: `https://billing.acme.com`
 2. Test authentication flow
 3. Verify API calls to backend
 4. Check Application Insights for telemetry
