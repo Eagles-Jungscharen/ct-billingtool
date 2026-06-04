@@ -1,0 +1,36 @@
+{
+  "name": "ct-billingtool",
+  "version": "0.1.0",
+  "description": "ChurchTool Billing Tool - Monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=@ct-billingtool/frontend",
+    "dev:backend": "cd packages/backend && func start",
+    "build:all": "npm run build --workspaces --if-present && cd packages/backend && dotnet build",
+    "build:frontend": "npm run build --workspace=@ct-billingtool/frontend",
+    "build:backend": "cd packages/backend && dotnet build",
+    "build:shared": "npm run build --workspace=@ct-billingtool/shared",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:frontend": "npm run lint --workspace=@ct-billingtool/frontend",
+    "clean": "npm run clean --workspaces --if-present && cd packages/backend && dotnet clean"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "churchtool",
+    "billing",
+    "invoice",
+    "monorepo"
+  ],
+  "author": "EaglesJungscharen",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/C_EaglesJungscharen/ct-billingtool"
+  }
+}

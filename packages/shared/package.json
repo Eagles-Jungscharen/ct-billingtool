@@ -1,0 +1,24 @@
+{
+  "name": "@ct-billingtool/shared",
+  "version": "0.1.0",
+  "description": "Shared types and utilities for ChurchTool Billing Tool",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "churchtool",
+    "billing",
+    "shared",
+    "types"
+  ],
+  "author": "EaglesJungscharen",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  }
+}
