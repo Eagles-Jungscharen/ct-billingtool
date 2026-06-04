@@ -1,6 +1,51 @@
-# Infrastructure Scripts (Planned)
+# Infrastructure Scripts
 
-This folder will contain helper scripts for infrastructure management and automation.
+This folder contains helper scripts for infrastructure management and automation.
+
+## Available Scripts
+
+### Custom Domain Setup
+- **`setup-custom-domains.ps1`** - Configure DNS records for custom domains
+
+  Prepares and optionally creates DNS records needed for custom domains on both frontend (Static Web App) and backend (Azure Functions).
+
+  **Prerequisites:**
+  - Azure CLI installed and authenticated (`az login`)
+  - Appropriate permissions to read Azure resources
+  - If using Azure DNS: permissions to modify DNS Zone records
+
+  **Usage - Manual Mode (Display DNS records):**
+  ```powershell
+  .\setup-custom-domains.ps1 `
+      -ResourceGroupName "rg-ct-billingtool" `
+      -FrontendResourceName "swa-ct-billingtool" `
+      -BackendResourceName "func-ct-billingtool" `
+      -FrontendDomain "billing.feg-effretikon.ch" `
+      -BackendDomain "api-billing.feg-effretikon.ch"
+  ```
+
+  **Usage - Azure DNS Mode (Automatic creation):**
+  ```powershell
+  .\setup-custom-domains.ps1 `
+      -ResourceGroupName "rg-ct-billingtool" `
+      -FrontendResourceName "swa-ct-billingtool" `
+      -BackendResourceName "func-ct-billingtool" `
+      -FrontendDomain "billing.feg-effretikon.ch" `
+      -BackendDomain "api-billing.feg-effretikon.ch" `
+      -DnsZoneName "feg-effretikon.ch" `
+      -DnsZoneResourceGroup "rg-dns"
+  ```
+
+  **What it does:**
+  - Retrieves default hostnames from Azure Static Web App and Function App
+  - Generates CNAME records for both frontend and backend
+  - Generates TXT record for Function App domain verification
+  - Either displays records for manual configuration OR automatically creates them in Azure DNS
+
+  **Help:**
+  ```powershell
+  Get-Help .\setup-custom-domains.ps1 -Full
+  ```
 
 ## Planned Scripts
 

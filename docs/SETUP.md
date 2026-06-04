@@ -113,18 +113,68 @@ Edit `packages/backend/local.settings.json`:
 
 ### 4. Start Azurite (Azure Storage Emulator)
 
-Start the local storage emulator using Docker:
+You have two options for running the Azure Storage Emulator locally. Choose the one that best fits your development environment:
+
+#### Option A: VS Code Extension (Recommended for Solo Development)
+
+The simplest way to run Azurite without requiring Docker.
+
+**Installation:**
+1. Install the **Azurite** extension from the VS Code marketplace
+   - Extension ID: `Azurite.azurite`
+   - Or search for "Azurite" in the Extensions view (`Cmd+Shift+X`)
+
+**Usage:**
+1. Open the Command Palette: `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Windows/Linux)
+2. Run: `Azurite: Start`
+3. To stop: `Azurite: Close`
+
+**Advantages:**
+- ✅ No Docker installation required
+- ✅ Lightweight and fast
+- ✅ Integrated directly in VS Code
+- ✅ Automatically recommended for this workspace
+
+#### Option B: Docker Compose (Recommended for Teams)
+
+Provides consistency across team environments and CI/CD pipelines.
+
+**Prerequisites:**
+- Docker Desktop must be installed and running
+
+**Usage:**
+
+Start the local storage emulator:
 
 ```bash
 cd infrastructure/local
 docker compose up -d
-cd ../..
+cd ../...
 ```
 
-Verify Azurite is running:
-- Blob Service: http://localhost:10000
-- Queue Service: http://localhost:10001
-- Table Service: http://localhost:10002
+Stop the emulator:
+
+```bash
+cd infrastructure/local
+docker compose down
+cd ../...
+```
+
+**Advantages:**
+- ✅ Consistent environment across all developers
+- ✅ Same setup can be used in CI/CD
+- ✅ Isolated from local development environment
+- ✅ Persists data in Docker volumes
+
+#### Verifying Azurite is Running
+
+Regardless of which option you choose, Azurite will be available on the same ports:
+
+- **Blob Service**: http://localhost:10000
+- **Queue Service**: http://localhost:10001
+- **Table Service**: http://localhost:10002
+
+The connection string `UseDevelopmentStorage=true` works with both options.
 
 ### 5. Build the Shared Package
 
@@ -184,7 +234,9 @@ This will automatically rebuild the shared package when types change.
 1. **Open the frontend**: Navigate to http://localhost:5173
 2. **Check backend health**: The frontend should be able to call the backend API
 3. **Test authentication**: Try logging in with ChurchTool credentials
-4. **Verify storage**: Check that Azurite is receiving data (in Docker logs)
+4. **Verify storage**: 
+   - VS Code Extension: Check VS Code Output panel (select "Azurite Blob" from dropdown)
+   - Docker: Check container logs: `docker logs ct-billingtool-azurite`
 
 ## Common Issues
 
@@ -204,9 +256,21 @@ If ports 5173 or 7072 are already in use:
 ### Azurite Connection Issues
 
 If the backend can't connect to Azurite:
-1. Ensure Docker is running
-2. Check Azurite container status: `docker ps`
-3. Restart Azurite: `cd infrastructure/local && docker compose restart`
+
+**VS Code Extension:**
+1. Check if Azurite is running: Look for "Azurite Blob/Queue/Table Service" in VS Code status bar
+2. Restart Azurite: `Cmd+Shift+P` → `Azurite: Close` → `Azurite: Start`
+3. Check VS Code Output panel for errors (select "Azurite Blob" from dropdown)
+
+**Docker:**
+1. Ensure Docker Desktop is running
+2. Check Azurite container status: `docker ps | grep azurite`
+3. View logs: `docker logs ct-billingtool-azurite`
+4. Restart Azurite: `cd infrastructure/local && docker compose restart`
+
+**Both Options:**
+- Verify ports 10000, 10001, 10002 are not in use by other applications
+- Check that `UseDevelopmentStorage=true` is set in `local.settings.json`
 
 ### Build Errors in Shared Package
 
