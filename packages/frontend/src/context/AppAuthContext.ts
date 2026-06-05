@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { GroupDto } from '../api/types';
+import type { GroupDto } from '@ct-billingtool/shared';
 
 export interface AppAuthContextValue {
   isAuthenticated: boolean

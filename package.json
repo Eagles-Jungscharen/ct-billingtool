@@ -9,10 +9,11 @@
   "scripts": {
     "dev:frontend": "npm run dev --workspace=@ct-billingtool/frontend",
     "dev:backend": "cd packages/backend && func start",
-    "build:all": "npm run build --workspaces --if-present && cd packages/backend && dotnet build",
+    "generate:types": "dotnet run --project packages/backend/Tools/DtoTypeGenerator/DtoTypeGenerator.csproj -- packages/shared/src/generated/dtos.ts",
+    "build:all": "npm run build:shared && npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run build --workspace=@ct-billingtool/frontend",
     "build:backend": "cd packages/backend && dotnet build",
-    "build:shared": "npm run build --workspace=@ct-billingtool/shared",
+    "build:shared": "npm run generate:types && npm run build --workspace=@ct-billingtool/shared",
     "lint": "npm run lint --workspaces --if-present",
     "lint:frontend": "npm run lint --workspace=@ct-billingtool/frontend",
     "clean": "npm run clean --workspaces --if-present && cd packages/backend && dotnet clean"

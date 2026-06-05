@@ -26,7 +26,7 @@ import type {
   CreateUpdateRechnungData,
   RechnungStatus,
   RechnungspositionDto,
-} from '../../api/types';
+} from '@ct-billingtool/shared';
 
 const useStyles = makeStyles({
   root: {},

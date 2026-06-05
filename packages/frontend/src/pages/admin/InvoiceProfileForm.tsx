@@ -14,7 +14,7 @@ import {
   useCreateRechnungsprofil,
   useUpdateRechnungsprofil,
 } from '../../hooks/useAdminInvoiceProfiles';
-import type { CreateUpdateRechnungsprofilData, RechnungsprofilDto } from '../../api/types';
+import type { CreateUpdateRechnungsprofilData, RechnungsprofilDto } from '@ct-billingtool/shared';
 
 const useStyles = makeStyles({
   grid: {

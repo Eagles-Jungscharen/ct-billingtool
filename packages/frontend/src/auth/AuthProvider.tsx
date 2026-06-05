@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AuthProvider as OidcAuthProvider, useAuth as useOidcAuth } from 'react-oidc-context';
 import { oidcConfig } from '../config/oidc';
 import { fetchMe } from '../api/me';
-import type { MeDto } from '../api/types';
+import type { MeDto } from '@ct-billingtool/shared';
 import { AppAuthContext, type AppAuthContextValue } from '../context/AppAuthContext';
 
 const InnerAuthProvider: React.FunctionComponent<React.PropsWithChildren> = (

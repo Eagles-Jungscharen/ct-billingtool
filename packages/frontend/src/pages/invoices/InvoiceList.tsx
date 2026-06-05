@@ -29,7 +29,7 @@ import {
 } from '@fluentui/react-icons';
 import { InvoiceStatusBadge } from '../../components/InvoiceStatusBadge';
 import { useRechnungen, useDeleteRechnung } from '../../hooks/useInvoices';
-import type { RechnungDto } from '../../api/types';
+import type { RechnungDto } from '@ct-billingtool/shared';
 
 const useStyles = makeStyles({
   root: {},

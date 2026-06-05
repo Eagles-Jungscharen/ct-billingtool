@@ -23,7 +23,7 @@ import {
 import { EditRegular, DeleteRegular } from '@fluentui/react-icons';
 import { useAdminRechnungsprofile, useDeleteRechnungsprofil } from '../../hooks/useAdminInvoiceProfiles';
 import { InvoiceProfileForm } from './InvoiceProfileForm';
-import type { RechnungsprofilDto } from '../../api/types';
+import type { RechnungsprofilDto } from '@ct-billingtool/shared';
 
 const useStyles = makeStyles({
   root: {

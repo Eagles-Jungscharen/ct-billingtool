@@ -19,7 +19,7 @@ import {
 } from '@react-pdf/renderer';
 import { useRechnung } from '../../hooks/useInvoices';
 import { useRechnungsprofile } from '../../hooks/useInvoiceProfiles';
-import type { RechnungDto, RechnungsprofilDto } from '../../api/types';
+import type { RechnungDto, RechnungsprofilDto } from '@ct-billingtool/shared';
 
 const useStyles = makeStyles({
   root: {},

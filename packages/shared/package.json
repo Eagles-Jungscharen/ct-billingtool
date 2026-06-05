@@ -6,7 +6,8 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "generate": "dotnet run --project ../backend/Tools/DtoTypeGenerator/DtoTypeGenerator.csproj -- src/generated/dtos.ts",
+    "build": "npm run generate && tsc",
     "watch": "tsc --watch",
     "clean": "rm -rf dist"
   },

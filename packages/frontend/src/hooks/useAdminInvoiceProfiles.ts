@@ -6,7 +6,7 @@ import {
   deleteRechnungsprofil,
 } from '../api/invoiceProfiles';
 import { useAppAuth } from './useAppAuth';
-import type { CreateUpdateRechnungsprofilData } from '../api/types';
+import type { CreateUpdateRechnungsprofilData } from '@ct-billingtool/shared';
 
 export const useAdminRechnungsprofile = () => {
   const { token, isAuthenticated, isAdmin } = useAppAuth();

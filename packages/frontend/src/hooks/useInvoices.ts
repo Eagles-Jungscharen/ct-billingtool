@@ -7,7 +7,7 @@ import {
   deleteRechnung,
 } from '../api/invoices';
 import { useAppAuth } from './useAppAuth';
-import type { CreateUpdateRechnungData } from '../api/types';
+import type { CreateUpdateRechnungData } from '@ct-billingtool/shared';
 
 export const useRechnungen = () => {
   const { token, isAuthenticated } = useAppAuth();

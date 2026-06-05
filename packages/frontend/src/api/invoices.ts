@@ -1,5 +1,5 @@
 import { authFetch } from './client';
-import type { RechnungDto, CreateUpdateRechnungData } from './types';
+import type { RechnungDto, CreateUpdateRechnungData } from '@ct-billingtool/shared';
 
 export const fetchRechnungen = async (token: string): Promise<RechnungDto[]> =>
   authFetch<RechnungDto[]>('/api/invoices', token);

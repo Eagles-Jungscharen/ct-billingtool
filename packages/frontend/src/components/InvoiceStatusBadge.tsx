@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '@fluentui/react-components';
-import type { RechnungStatus } from '../api/types';
+import type { RechnungStatus } from '@ct-billingtool/shared';
 
 interface Props {
   status: RechnungStatus

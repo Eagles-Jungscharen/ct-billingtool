@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config/api';
-import type { ApiError } from './types';
+import type { ApiError } from '@ct-billingtool/shared';
 
 export class ApiResponseError extends Error {
   readonly apiError: ApiError;
