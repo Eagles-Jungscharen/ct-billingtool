@@ -63,32 +63,46 @@ cd ../..
 
 ### 3. Configure Environment Variables
 
-#### Frontend Environment
+Use the central root environment file and synchronize it into frontend and backend config files.
 
-Copy the example environment file and configure it:
+Copy the example file:
 
 ```bash
-cp packages/frontend/.env.example packages/frontend/.env.local
+cp .env.example .env.local
 ```
 
-Edit `packages/frontend/.env.local`:
+Edit `.env.local` in the repository root:
 
 ```env
 VITE_OIDC_AUTHORITY=https://authentication.feg-effretikon.ch/api/oidc
 VITE_OIDC_CLIENT_ID=your-client-id
 VITE_OIDC_REDIRECT_URI=http://localhost:5173/auth/callback
+VITE_OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
 VITE_API_BASE_URL=http://localhost:7072
+AzureWebJobsStorage=UseDevelopmentStorage=true
+FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+APPLICATIONINSIGHTS_CONNECTION_STRING=
+CHURCHTOOL_URL=https://your-church.church.tools
+OIDC_AUTHORITY_URL=https://authentication.feg-effretikon.ch/api/oidc
+CHURCHTOOL_IDP_STORAGE_CONNECTION_STRING=UseDevelopmentStorage=true
+CHURCHTOOL_IDP_BASE_URL=https://your-idp-function.azurewebsites.net
+CHURCHTOOL_IDP_FUNCTION_KEY=your-function-key
+CHURCHTOOL_ADMIN_GROUP_ID=your-admin-group-id
 ```
 
-#### Backend Environment
-
-Copy the example settings file:
+Run the sync script:
 
 ```bash
-cp packages/backend/local.settings.json.example packages/backend/local.settings.json
+npm run sync:env
 ```
 
-Edit `packages/backend/local.settings.json`:
+This generates/updates:
+- `packages/frontend/.env.local`
+- `packages/backend/local.settings.json`
+
+Backend values are written to the `Values` section of `packages/backend/local.settings.json`.
+
+Example result:
 
 ```json
 {
@@ -110,6 +124,8 @@ Edit `packages/backend/local.settings.json`:
   }
 }
 ```
+
+After changing `.env.local`, run `npm run sync:env` again.
 
 ### 4. Start Azurite (Azure Storage Emulator)
 

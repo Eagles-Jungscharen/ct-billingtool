@@ -7,8 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:frontend": "npm run dev --workspace=@ct-billingtool/frontend",
-    "dev:backend": "cd packages/backend && func start",
+    "sync:env": "node scripts/sync-env.mjs",
+    "dev:frontend": "npm run sync:env && npm run dev --workspace=@ct-billingtool/frontend",
+    "dev:backend": "npm run sync:env && cd packages/backend && func start",
     "generate:types": "dotnet run --project packages/backend/Tools/DtoTypeGenerator/DtoTypeGenerator.csproj -- packages/shared/src/generated/dtos.ts",
     "build:all": "npm run build:shared && npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run build --workspace=@ct-billingtool/frontend",

@@ -76,7 +76,10 @@ Siehe [docs/SETUP.md](docs/SETUP.md) für detaillierte Anweisungen.
 ```bash
 cp .env.example .env.local
 # Bearbeite .env.local mit deinen Konfigurationswerten
+npm run sync:env
 ```
+
+Der Sync schreibt die Werte nach `packages/frontend/.env.local` und `packages/backend/local.settings.json`.
 
 4. **Azurite starten** (Azure Storage Emulator)
 
@@ -133,6 +136,7 @@ Im Root-Verzeichnis:
 
 ```bash
 # Frontend
+npm run sync:env          # Root .env.local in Frontend/Backend synchronisieren
 npm run dev:frontend       # Frontend Dev-Server starten
 npm run build:frontend     # Frontend für Production bauen
 
