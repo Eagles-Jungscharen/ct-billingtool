@@ -1,0 +1,831 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.8.12551",
+      "templateHash": "15317389492480029775"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Deployment location for all resources."
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "Environment name, e.g. dev, staging, prod."
+      }
+    },
+    "prefix": {
+      "type": "string",
+      "defaultValue": "ctbilling",
+      "metadata": {
+        "description": "Short project prefix used for generated resource names."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Tags applied to all resources."
+      }
+    },
+    "frontendStorageAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 24,
+      "metadata": {
+        "description": "Optional explicit name for frontend storage account. Leave empty to auto-generate."
+      }
+    },
+    "dataStorageAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 24,
+      "metadata": {
+        "description": "Optional explicit name for data storage account. Leave empty to auto-generate."
+      }
+    },
+    "functionAppName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 60,
+      "metadata": {
+        "description": "Optional explicit name for function app. Leave empty to auto-generate."
+      }
+    },
+    "enableCdn": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable CDN for frontend custom domain and edge caching."
+      }
+    },
+    "cdnProfileName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional explicit CDN profile name. Leave empty to auto-generate."
+      }
+    },
+    "cdnEndpointName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional explicit CDN endpoint name. Leave empty to auto-generate."
+      }
+    },
+    "frontendCustomDomain": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional custom frontend domain for CDN, e.g. billing.example.org."
+      }
+    },
+    "appInsightsName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional explicit Application Insights name. Leave empty to auto-generate."
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional explicit Log Analytics Workspace name. Leave empty to auto-generate."
+      }
+    }
+  },
+  "variables": {
+    "frontendStorageName": "[if(empty(parameters('frontendStorageAccountName')), toLower(take(format('{0}{1}web{2}', parameters('prefix'), parameters('environmentName'), uniqueString(resourceGroup().id)), 24)), toLower(parameters('frontendStorageAccountName')))]",
+    "dataStorageName": "[if(empty(parameters('dataStorageAccountName')), toLower(take(format('{0}{1}data{2}', parameters('prefix'), parameters('environmentName'), uniqueString(subscription().id, resourceGroup().name)), 24)), toLower(parameters('dataStorageAccountName')))]",
+    "appInsightsResourceName": "[if(empty(parameters('appInsightsName')), take(format('{0}-{1}-appi', parameters('prefix'), parameters('environmentName')), 260), parameters('appInsightsName'))]",
+    "logAnalyticsName": "[if(empty(parameters('logAnalyticsWorkspaceName')), take(format('{0}-{1}-law', parameters('prefix'), parameters('environmentName')), 63), parameters('logAnalyticsWorkspaceName'))]",
+    "generatedFunctionAppName": "[toLower(take(format('{0}-{1}-func-{2}', parameters('prefix'), parameters('environmentName'), uniqueString(resourceGroup().id)), 60))]",
+    "finalFunctionAppName": "[if(empty(parameters('functionAppName')), variables('generatedFunctionAppName'), toLower(parameters('functionAppName')))]",
+    "generatedCdnProfileName": "[toLower(take(format('{0}-{1}-cdn-{2}', parameters('prefix'), parameters('environmentName'), uniqueString(resourceGroup().id)), 50))]",
+    "generatedCdnEndpointName": "[toLower(take(format('{0}-{1}-web-{2}', parameters('prefix'), parameters('environmentName'), uniqueString(resourceGroup().id)), 50))]",
+    "finalCdnProfileName": "[if(empty(parameters('cdnProfileName')), variables('generatedCdnProfileName'), toLower(parameters('cdnProfileName')))]",
+    "finalCdnEndpointName": "[if(empty(parameters('cdnEndpointName')), variables('generatedCdnEndpointName'), toLower(parameters('cdnEndpointName')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-static-website-{0}', parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('frontendStorageName')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "11900554831244991998"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment location."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Storage account name for static website hosting."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to this resource."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": true,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2021-09-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                },
+                "containerDeleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                },
+                "cors": {
+                  "corsRules": []
+                },
+                "isVersioningEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('storageAccountName')]"
+            },
+            "primaryWebEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').primaryEndpoints.web]"
+            },
+            "webHostName": {
+              "type": "string",
+              "value": "[replace(replace(reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').primaryEndpoints.web, 'https://', ''), '/', '')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-data-{0}', parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('dataStorageName')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "16051778649726950956"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment location."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 24,
+              "metadata": {
+                "description": "Storage account name for application data."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to this resource."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', 'InvoiceProfiles')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', 'Invoices')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', 'InvoiceLineItems')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('storageAccountName'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('storageAccountName')]"
+            },
+            "tableServiceName": {
+              "type": "string",
+              "value": "default"
+            },
+            "connectionString": {
+              "type": "string",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value, environment().suffixes.storage)]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('monitoring-{0}', parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appInsightsName": {
+            "value": "[variables('appInsightsResourceName')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[variables('logAnalyticsName')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "6992503270052218294"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment location."
+              }
+            },
+            "appInsightsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights component name."
+              }
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics Workspace name."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to these resources."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('logAnalyticsWorkspaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30,
+                "features": {
+                  "enableLogAccessUsingOnlyResourcePermissions": true
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
+                "IngestionMode": "ApplicationInsights"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logAnalyticsWorkspaceName": {
+              "type": "string",
+              "value": "[parameters('logAnalyticsWorkspaceName')]"
+            },
+            "appInsightsName": {
+              "type": "string",
+              "value": "[parameters('appInsightsName')]"
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('function-app-{0}', parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "functionAppName": {
+            "value": "[variables('finalFunctionAppName')]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', parameters('environmentName'))), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "dataStorageConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-data-{0}', parameters('environmentName'))), '2025-04-01').outputs.connectionString.value]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "3233180217429466176"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment location."
+              }
+            },
+            "functionAppName": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60,
+              "metadata": {
+                "description": "Name of the Azure Function App."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string for telemetry."
+              }
+            },
+            "dataStorageConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Connection string to the data storage account (Table Storage)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to these resources."
+              }
+            }
+          },
+          "variables": {
+            "runtimeStorageAccountName": "[toLower(take(format('st{0}{1}', uniqueString(parameters('functionAppName'), resourceGroup().id), replace(parameters('functionAppName'), '-', '')), 24))]",
+            "planName": "[format('{0}-plan', parameters('functionAppName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('runtimeStorageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('planName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Y1",
+                "tier": "Dynamic"
+              },
+              "kind": "functionapp",
+              "properties": {
+                "reserved": false
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('functionAppName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "functionapp",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "appSettings": [
+                    {
+                      "name": "AzureWebJobsStorage",
+                      "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('runtimeStorageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('runtimeStorageAccountName')), '2023-05-01').keys[0].value, environment().suffixes.storage)]"
+                    },
+                    {
+                      "name": "FUNCTIONS_EXTENSION_VERSION",
+                      "value": "~4"
+                    },
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "dotnet-isolated"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "APPINSIGHTS_CONNECTIONSTRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "BillingTool__Storage__ConnectionString",
+                      "value": "[parameters('dataStorageConnectionString')]"
+                    }
+                  ],
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "http20Enabled": true
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('runtimeStorageAccountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[parameters('functionAppName')]"
+            },
+            "defaultHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2023-12-01').defaultHostName]"
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2023-12-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', parameters('environmentName')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('storage-data-{0}', parameters('environmentName')))]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableCdn')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('cdn-{0}', parameters('environmentName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "cdnProfileName": {
+            "value": "[variables('finalCdnProfileName')]"
+          },
+          "endpointName": {
+            "value": "[variables('finalCdnEndpointName')]"
+          },
+          "originHostName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-static-website-{0}', parameters('environmentName'))), '2025-04-01').outputs.webHostName.value]"
+          },
+          "customDomainName": {
+            "value": "[parameters('frontendCustomDomain')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "6038304068729466378"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment location for the CDN profile."
+              }
+            },
+            "cdnProfileName": {
+              "type": "string",
+              "metadata": {
+                "description": "CDN profile name."
+              }
+            },
+            "endpointName": {
+              "type": "string",
+              "metadata": {
+                "description": "CDN endpoint name."
+              }
+            },
+            "originHostName": {
+              "type": "string",
+              "metadata": {
+                "description": "Origin host name for static website, without protocol."
+              }
+            },
+            "customDomainName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional custom domain to attach to the CDN endpoint."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to these resources."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cdn/profiles",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('cdnProfileName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_Microsoft"
+              }
+            },
+            {
+              "type": "Microsoft.Cdn/profiles/endpoints",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('cdnProfileName'), parameters('endpointName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "isHttpAllowed": false,
+                "isHttpsAllowed": true,
+                "originHostHeader": "[parameters('originHostName')]",
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "origins": [
+                  {
+                    "name": "frontend-origin",
+                    "properties": {
+                      "hostName": "[parameters('originHostName')]",
+                      "httpPort": 80,
+                      "httpsPort": 443
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('customDomainName')))]",
+              "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('cdnProfileName'), parameters('endpointName'), replace(parameters('customDomainName'), '.', '-'))]",
+              "properties": {
+                "hostName": "[parameters('customDomainName')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('endpointName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "profileName": {
+              "type": "string",
+              "value": "[parameters('cdnProfileName')]"
+            },
+            "endpointName": {
+              "type": "string",
+              "value": "[parameters('endpointName')]"
+            },
+            "endpointHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('endpointName')), '2023-05-01').hostName]"
+            },
+            "customDomainResourceName": {
+              "type": "string",
+              "value": "[if(empty(parameters('customDomainName')), '', replace(parameters('customDomainName'), '.', '-'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('storage-static-website-{0}', parameters('environmentName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "frontendStorageAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-static-website-{0}', parameters('environmentName'))), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "frontendWebsiteUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-static-website-{0}', parameters('environmentName'))), '2025-04-01').outputs.primaryWebEndpoint.value]"
+    },
+    "dataStorageAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-data-{0}', parameters('environmentName'))), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "functionAppName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('function-app-{0}', parameters('environmentName'))), '2025-04-01').outputs.functionAppName.value]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', format('function-app-{0}', parameters('environmentName'))), '2025-04-01').outputs.defaultHostName.value)]"
+    },
+    "applicationInsightsName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', parameters('environmentName'))), '2025-04-01').outputs.appInsightsName.value]"
+    },
+    "cdnEndpointHostName": {
+      "type": "string",
+      "value": "[if(parameters('enableCdn'), reference(resourceId('Microsoft.Resources/deployments', format('cdn-{0}', parameters('environmentName'))), '2025-04-01').outputs.endpointHostName.value, '')]"
+    }
+  }
+}

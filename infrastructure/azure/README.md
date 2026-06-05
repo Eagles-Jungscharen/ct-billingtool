@@ -1,80 +1,100 @@
-# Azure Infrastructure (Planned)
+# Azure-Infrastruktur
 
-This folder will contain Infrastructure as Code (IaC) templates for deploying the ChurchTool Billing Tool to Azure.
+Dieser Ordner enthält Infrastructure-as-Code-(IaC)-Vorlagen für die Bereitstellung des ChurchTool Billing Tools auf Azure.
 
-## Planned Contents
+## Inhalt
 
-### Option 1: Bicep Templates
-- `main.bicep` - Main deployment template
-- `modules/` - Reusable Bicep modules
-  - `storage-static-website.bicep` - Frontend hosting (Blob Storage Static Website)
-  - `function-app.bicep` - Backend Azure Functions
-  - `storage-data.bicep` - Azure Table Storage for data persistence
-  - `cdn.bicep` - Azure CDN for custom domain and HTTPS
+### Bicep-Vorlagen
+- `main.bicep` - Hauptvorlage für die Bereitstellung
+- `modules/` - Wiederverwendbare Bicep-Module
+  - `storage-static-website.bicep` - Frontend-Hosting (Blob Storage Static Website)
+  - `function-app.bicep` - Backend mit Azure Functions
+  - `storage-data.bicep` - Azure Table Storage für Datenpersistenz
+  - `cdn.bicep` - Azure CDN für benutzerdefinierte Domain und HTTPS
   - `monitoring.bicep` - Application Insights
 
-### Option 2: Terraform
-- `main.tf` - Main Terraform configuration
-- `variables.tf` - Input variables
-- `outputs.tf` - Output values
-- `modules/` - Reusable Terraform modules
+## Deployment-Strategie
 
-## Deployment Strategy
-
-The application consists of:
+Die Anwendung besteht aus:
 1. **Frontend** - Azure Blob Storage Static Website (React/Vite)
-   - Simple, cost-effective static file hosting
-   - No server-side rendering required
+   - Einfaches, kosteneffizientes Hosting statischer Dateien
+   - Kein Server-Side Rendering erforderlich
 2. **Backend** - Azure Functions (.NET 10 Isolated)
-   - Serverless API endpoints
-   - Consumption or Flex Consumption plan
-3. **Storage** - Azure Table Storage for data persistence
-   - Invoice profiles, invoices, and related data
-4. **CDN** - Azure CDN (optional but recommended)
-   - Custom domain support (e.g., billing.feg-effretikon.ch)
-   - HTTPS/SSL termination
-   - Global content delivery
-5. **Authentication** - ChurchTool OIDC provider (external)
-   - Frontend handles authentication flow
-   - Backend validates tokens
-6. **Monitoring** - Application Insights for telemetry
-   - Frontend telemetry via JavaScript SDK
-   - Backend telemetry built into Functions
+   - Serverlose API-Endpunkte
+   - Consumption- oder Flex-Consumption-Plan
+3. **Storage** - Azure Table Storage für Datenpersistenz
+   - Rechnungsprofile, Rechnungen und zugehörige Daten
+4. **CDN** - Azure CDN (optional, aber empfohlen)
+   - Unterstützung für benutzerdefinierte Domains (z. B. billing.feg-effretikon.ch)
+   - HTTPS/SSL-Terminierung
+   - Globale Auslieferung von Inhalten
+5. **Authentication** - ChurchTool OIDC-Provider (extern)
+   - Das Frontend übernimmt den Authentifizierungsfluss
+   - Das Backend validiert Tokens
+6. **Monitoring** - Application Insights für Telemetrie
+   - Frontend-Telemetrie über JavaScript SDK
+   - Backend-Telemetrie ist in Functions integriert
 
-## Architecture Notes
+## Bereitstellen mit Bicep
 
-### Frontend Hosting Choice: Blob Storage Static Website
+Aus dem Repository-Root:
 
-**Why Blob Storage over Azure Static Web Apps:**
-- ✅ **Simplicity**: No managed Functions integration needed (we have separate Function App)
-- ✅ **Cost**: Lower costs for small-scale deployment
-- ✅ **Control**: Full control over CDN and caching configuration
-- ✅ **Separation**: Clear separation between frontend and backend deployments
+```bash
+az deployment group create \
+   --resource-group <your-resource-group> \
+   --template-file infrastructure/azure/main.bicep \
+   --parameters environmentName=prod prefix=ctbilling
+```
 
-**Trade-offs:**
-- ⚠️ Custom domain requires Azure CDN (separate resource)
-- ⚠️ No built-in CI/CD (use GitHub Actions instead)
-- ⚠️ No preview environments (manual staging setup if needed)
+Optionale Parameter in `main.bicep`:
+- `enableCdn` (Standard: `true`)
+- `frontendCustomDomain` (standardmäßig leer)
+- explizite Ressourcennamen, wenn keine automatisch generierten Namen gewünscht sind
 
-### DNS Configuration
+Static Website nach der Bereitstellung aktivieren (erforderlich für Blob Static Website Hosting):
 
-For custom domains, two separate DNS records are needed:
-- **Frontend**: CNAME to CDN endpoint (e.g., billing.feg-effretikon.ch → CDN)
-- **Backend**: CNAME to Function App (e.g., api-billing.feg-effretikon.ch → Function App)
+```bash
+az storage blob service-properties update \
+   --account-name <frontend-storage-account-name> \
+   --static-website \
+   --index-document index.html \
+   --404-document index.html
+```
 
-See [setup-custom-domains.ps1](../scripts/setup-custom-domains.ps1) - Note: Script needs to be adapted for CDN instead of Static Web App.
+## Architekturhinweise
 
-## Future Enhancements
+### Hosting-Entscheidung Frontend: Blob Storage Static Website
 
-- CI/CD integration with GitHub Actions
-  - Separate workflows for frontend (Blob Storage) and backend (Function App)
-- Multi-environment support (dev, staging, production)
-  - Separate storage accounts per environment
-- Automated backup and disaster recovery
-- Cost optimization
-  - Review CDN tier (Standard Microsoft is cheapest)
-  - Consider Azure Front Door for advanced scenarios
-- Security hardening
-  - Private Endpoints for Function App and Storage
-  - VNet integration for backend
-  - WAF rules on CDN/Front Door
+**Warum Blob Storage statt Azure Static Web Apps:**
+- ✅ **Einfachheit**: Keine verwaltete Functions-Integration nötig (es gibt eine separate Function App)
+- ✅ **Kosten**: Geringere Kosten bei kleinerem Deployment
+- ✅ **Kontrolle**: Volle Kontrolle über CDN- und Caching-Konfiguration
+- ✅ **Trennung**: Klare Trennung zwischen Frontend- und Backend-Deployments
+
+**Abwägungen:**
+- ⚠️ Benutzerdefinierte Domain erfordert Azure CDN (separate Ressource)
+- ⚠️ Kein integriertes CI/CD (stattdessen GitHub Actions nutzen)
+- ⚠️ Keine Preview-Umgebungen (manuelles Staging-Setup bei Bedarf)
+
+### DNS-Konfiguration
+
+Für benutzerdefinierte Domains werden zwei separate DNS-Einträge benötigt:
+- **Frontend**: CNAME zum CDN-Endpunkt (z. B. billing.feg-effretikon.ch → CDN)
+- **Backend**: CNAME zur Function App (z. B. api-billing.feg-effretikon.ch → Function App)
+
+Siehe [setup-custom-domains.ps1](../scripts/setup-custom-domains.ps1) - Hinweis: Das Skript muss für CDN statt Static Web App angepasst werden.
+
+## Zukünftige Erweiterungen
+
+- CI/CD-Integration mit GitHub Actions
+   - Separate Workflows für Frontend (Blob Storage) und Backend (Function App)
+- Unterstützung mehrerer Umgebungen (dev, staging, production)
+   - Separate Storage Accounts pro Umgebung
+- Automatisierte Backups und Disaster Recovery
+- Kostenoptimierung
+   - CDN-Tier prüfen (Standard Microsoft ist am günstigsten)
+   - Für fortgeschrittene Szenarien Azure Front Door in Betracht ziehen
+- Sicherheits-Härtung
+   - Private Endpoints für Function App und Storage
+   - VNet-Integration für das Backend
+   - WAF-Regeln auf CDN/Front Door
