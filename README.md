@@ -108,7 +108,7 @@ npm run dev:frontend
 **Terminal 2 - Backend:**
 ```bash
 npm run dev:backend
-# Läuft auf http://localhost:7072
+# Läuft auf http://localhost:7071
 ```
 
 **Terminal 3 - Shared Watch (optional):**
