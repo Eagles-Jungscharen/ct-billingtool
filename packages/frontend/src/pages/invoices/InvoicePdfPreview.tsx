@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   makeStyles,
@@ -16,8 +16,9 @@ import {
   StyleSheet,
   View,
   Text as PdfText,
+  Image,
 } from '@react-pdf/renderer';
-import { useRechnung } from '../../hooks/useInvoices';
+import { useRechnung, useRechnungPaymentSlip } from '../../hooks/useInvoices';
 import { useRechnungsprofile } from '../../hooks/useInvoiceProfiles';
 import type { RechnungDto, RechnungsprofilDto } from '@ct-billingtool/shared';
 
@@ -44,10 +45,20 @@ const useStyles = makeStyles({
 
 const pdfStyles = StyleSheet.create({
   page: {
-    padding: 40,
+    paddingTop: 40,
+    paddingBottom: 0,
+    paddingLeft: 40,
+    paddingRight: 40,
+    display: 'flex',
+    flexDirection: 'column',
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: '#1a1a1a',
+  },
+  content: {
+    flexGrow: 1,
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -57,7 +68,7 @@ const pdfStyles = StyleSheet.create({
   absender: {
     fontSize: 9,
     color: '#666',
-    lineHeight: 1.5,
+    lineHeight: 1.3,
   },
   rechnungsnummer: {
     fontSize: 18,
@@ -78,7 +89,8 @@ const pdfStyles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   empfaengerText: {
-    lineHeight: 1.5,
+    fontSize: 10,
+    lineHeight: 1.2,
   },
   titel: {
     fontSize: 14,
@@ -142,6 +154,23 @@ const pdfStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  paymentSlipContainer: {
+    paddingTop: 24,
+    alignItems: 'center',
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+  },
+  paymentSlipLabel: {
+    fontSize: 9,
+    color: '#666',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  paymentSlipImage: {
+    width: '210mm',
+    height: '105mm',
+  },
 });
 
 const formatCHF = (amount: number) =>
@@ -156,83 +185,91 @@ const stripHtml = (html: string): string =>
 interface PdfDocProps {
   rechnung: RechnungDto
   profil: RechnungsprofilDto | undefined
+  paymentSlipDataUrl: string | null
 }
 
-const InvoicePdfDocument: React.FunctionComponent<PdfDocProps> = ({ rechnung, profil }: PdfDocProps) => {
+const InvoicePdfDocument: React.FunctionComponent<PdfDocProps> = ({
+  rechnung,
+  profil,
+  paymentSlipDataUrl,
+}: PdfDocProps) => {
   const total = rechnung.positionen.reduce((sum, p) => sum + p.preisTotal, 0);
 
   return (
     <Document title={`Rechnung ${rechnung.rechnungsnummer}`}>
       <Page size="A4" style={pdfStyles.page}>
-        {/* Header */}
-        <View style={pdfStyles.header}>
-          <View style={pdfStyles.absender}>
-            {profil && (
-              <>
-                <PdfText style={{ fontFamily: 'Helvetica-Bold', fontSize: 11 }}>{profil.absenderName}</PdfText>
-                <PdfText>{profil.strasse} {profil.hausnummer}</PdfText>
-                <PdfText>{profil.plz} {profil.ort}</PdfText>
-                <PdfText> </PdfText>
-                <PdfText>IBAN: {profil.iban}</PdfText>
-              </>
-            )}
-          </View>
-          <View>
-            <PdfText style={pdfStyles.rechnungsnummer}>Rechnung {rechnung.rechnungsnummer}</PdfText>
-            <PdfText style={pdfStyles.rechnungsMeta}>Datum: {rechnung.rechnungsDatum ? formatDate(rechnung.rechnungsDatum) : formatDate(rechnung.createdAt)}</PdfText>
-          </View>
-        </View>
-
-        {/* Empfänger */}
-        <View style={pdfStyles.empfaenger}>
-          <PdfText style={pdfStyles.empfaengerLabel}>An</PdfText>
-          <View style={pdfStyles.empfaengerText}>
-            <PdfText>{rechnung.empfaengerName}</PdfText>
-            <PdfText>{rechnung.empfaengerStrasse} {rechnung.empfaengerHausnummer}</PdfText>
-            <PdfText>{rechnung.empfaengerPlz} {rechnung.empfaengerOrt}</PdfText>
-          </View>
-        </View>
-
-        {/* Titel & Beschreibung */}
-        <PdfText style={pdfStyles.titel}>{rechnung.titel}</PdfText>
-        {rechnung.beschreibung && (
-          <PdfText style={pdfStyles.beschreibung}>{stripHtml(rechnung.beschreibung)}</PdfText>
-        )}
-
-        {/* Tabelle */}
-        <View style={pdfStyles.table}>
-          <View style={pdfStyles.tableHeader}>
-            <PdfText style={pdfStyles.colNr}>Nr.</PdfText>
-            <PdfText style={pdfStyles.colTitel}>Titel</PdfText>
-            <PdfText style={pdfStyles.colEinheit}>Einheit</PdfText>
-            <PdfText style={pdfStyles.colAnzahl}>Anz.</PdfText>
-            <PdfText style={pdfStyles.colPreis}>Preis/Einheit</PdfText>
-            <PdfText style={pdfStyles.colTotal}>Total</PdfText>
-          </View>
-          {rechnung.positionen.map((pos) => (
-            <View key={pos.id} style={pdfStyles.tableRow}>
-              <PdfText style={pdfStyles.colNr}>{pos.nummer}</PdfText>
-              <PdfText style={pdfStyles.colTitel}>{pos.titel}{pos.beschreibung ? `\n${pos.beschreibung}` : ''}</PdfText>
-              <PdfText style={pdfStyles.colEinheit}>{pos.einheit}</PdfText>
-              <PdfText style={pdfStyles.colAnzahl}>{pos.anzahl}</PdfText>
-              <PdfText style={pdfStyles.colPreis}>{formatCHF(pos.preisProEinheit)}</PdfText>
-              <PdfText style={pdfStyles.colTotal}>{formatCHF(pos.preisTotal)}</PdfText>
+        <View style={pdfStyles.content}>
+          {/* Header */}
+          <View style={pdfStyles.header}>
+            <View style={pdfStyles.absender}>
+              {profil && (
+                <>
+                  <PdfText style={{ fontFamily: 'Helvetica-Bold', fontSize: 11 }}>{profil.absenderName}</PdfText>
+                  <PdfText>{profil.strasse} {profil.hausnummer}</PdfText>
+                  <PdfText>{profil.plz} {profil.ort}</PdfText>
+                  <PdfText> </PdfText>
+                  <PdfText>IBAN: {profil.iban}</PdfText>
+                </>
+              )}
             </View>
-          ))}
+            <View>
+              <PdfText style={pdfStyles.rechnungsnummer}>Rechnung {rechnung.rechnungsnummer}</PdfText>
+              <PdfText style={pdfStyles.rechnungsMeta}>Datum: {rechnung.rechnungsDatum ? formatDate(rechnung.rechnungsDatum) : formatDate(rechnung.createdAt)}</PdfText>
+            </View>
+          </View>
+
+          {/* Empfänger */}
+          <View style={pdfStyles.empfaenger}>
+            <PdfText style={pdfStyles.empfaengerLabel}>An</PdfText>
+            <View style={pdfStyles.empfaengerText}>
+              <PdfText>{rechnung.empfaengerName}</PdfText>
+              <PdfText>{rechnung.empfaengerStrasse} {rechnung.empfaengerHausnummer}</PdfText>
+              <PdfText>{rechnung.empfaengerPlz} {rechnung.empfaengerOrt}</PdfText>
+            </View>
+          </View>
+
+          {/* Titel & Beschreibung */}
+          <PdfText style={pdfStyles.titel}>{rechnung.titel}</PdfText>
+          {rechnung.beschreibung && (
+            <PdfText style={pdfStyles.beschreibung}>{stripHtml(rechnung.beschreibung)}</PdfText>
+          )}
+
+          {/* Tabelle */}
+          <View style={pdfStyles.table}>
+            <View style={pdfStyles.tableHeader}>
+              <PdfText style={pdfStyles.colNr}>Nr.</PdfText>
+              <PdfText style={pdfStyles.colTitel}>Titel</PdfText>
+              <PdfText style={pdfStyles.colEinheit}>Einheit</PdfText>
+              <PdfText style={pdfStyles.colAnzahl}>Anz.</PdfText>
+              <PdfText style={pdfStyles.colPreis}>Preis/Einheit</PdfText>
+              <PdfText style={pdfStyles.colTotal}>Total</PdfText>
+            </View>
+            {rechnung.positionen.map((pos) => (
+              <View key={pos.id} style={pdfStyles.tableRow}>
+                <PdfText style={pdfStyles.colNr}>{pos.nummer}</PdfText>
+                <PdfText style={pdfStyles.colTitel}>{pos.titel}{pos.beschreibung ? `\n${pos.beschreibung}` : ''}</PdfText>
+                <PdfText style={pdfStyles.colEinheit}>{pos.einheit}</PdfText>
+                <PdfText style={pdfStyles.colAnzahl}>{pos.anzahl}</PdfText>
+                <PdfText style={pdfStyles.colPreis}>{formatCHF(pos.preisProEinheit)}</PdfText>
+                <PdfText style={pdfStyles.colTotal}>{formatCHF(pos.preisTotal)}</PdfText>
+              </View>
+            ))}
+          </View>
+
+          {/* Total */}
+          <View style={pdfStyles.totalRow}>
+            <PdfText style={pdfStyles.totalLabel}>Gesamtbetrag</PdfText>
+            <PdfText style={pdfStyles.totalValue}>{formatCHF(total)}</PdfText>
+          </View>
+
+          {paymentSlipDataUrl && (
+            <View style={pdfStyles.paymentSlipContainer} wrap={false}>
+              <PdfText style={pdfStyles.paymentSlipLabel}>QR-Einzahlungsschein</PdfText>
+              <Image style={pdfStyles.paymentSlipImage} src={paymentSlipDataUrl} />
+            </View>
+          )}
         </View>
 
-        {/* Total */}
-        <View style={pdfStyles.totalRow}>
-          <PdfText style={pdfStyles.totalLabel}>Gesamtbetrag</PdfText>
-          <PdfText style={pdfStyles.totalValue}>{formatCHF(total)}</PdfText>
-        </View>
-
-        {/* Footer */}
-        <View style={pdfStyles.footer} fixed>
-          <PdfText>{profil?.absenderName ?? ''}</PdfText>
-          <PdfText>IBAN: {profil?.iban ?? ''}</PdfText>
-          <PdfText>Rechnung {rechnung.rechnungsnummer}</PdfText>
-        </View>
       </Page>
     </Document>
   );
@@ -244,7 +281,23 @@ export const InvoicePdfPreview: React.FunctionComponent = () => {
   const { id } = useParams<{ id: string }>();
 
   const { data: rechnung, isLoading: loadingRechnung } = useRechnung(id ?? '');
+  const { data: paymentSlipBlob } = useRechnungPaymentSlip(id ?? '');
   const { data: profile, isLoading: loadingProfiles } = useRechnungsprofile();
+
+  const [paymentSlipDataUrl, setPaymentSlipDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!paymentSlipBlob) {
+      setPaymentSlipDataUrl(null);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPaymentSlipDataUrl(typeof reader.result === 'string' ? reader.result : null);
+    };
+    reader.readAsDataURL(paymentSlipBlob);
+  }, [paymentSlipBlob]);
 
   const profil = profile?.find((p) => p.id === rechnung?.rechnungsprofilId);
 
@@ -268,7 +321,7 @@ export const InvoicePdfPreview: React.FunctionComponent = () => {
           Rechnung {rechnung.rechnungsnummer} – PDF
         </Text>
         <PDFDownloadLink
-          document={<InvoicePdfDocument rechnung={rechnung} profil={profil} />}
+          document={<InvoicePdfDocument rechnung={rechnung} profil={profil} paymentSlipDataUrl={paymentSlipDataUrl} />}
           fileName={`Rechnung_${rechnung.rechnungsnummer}.pdf`}
         >
           {({ loading }) => (
@@ -284,7 +337,7 @@ export const InvoicePdfPreview: React.FunctionComponent = () => {
       </div>
 
       <PDFViewer className={styles.viewer}>
-        <InvoicePdfDocument rechnung={rechnung} profil={profil} />
+        <InvoicePdfDocument rechnung={rechnung} profil={profil} paymentSlipDataUrl={paymentSlipDataUrl} />
       </PDFViewer>
     </div>
   );

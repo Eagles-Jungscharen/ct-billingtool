@@ -9,7 +9,11 @@
     "CHURCHTOOL_IDP_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
     "CHURCHTOOL_IDP_BASE_URL": "",
     "CHURCHTOOL_IDP_FUNCTION_KEY": "",
-    "CHURCHTOOL_ADMIN_GROUP_ID": ""
+    "CHURCHTOOL_ADMIN_GROUP_ID": "",
+    "QR_BILL_FUNCTION_BASE_URL": "",
+    "QR_BILL_FUNCTION_KEY": "",
+    "QR_BILL_CONTAINER_NAME": "invoice-qrbills",
+    "QR_BILL_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true"
   },
   "Host": {
     "CORS": "http://localhost:5173",

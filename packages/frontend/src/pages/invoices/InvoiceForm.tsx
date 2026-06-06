@@ -19,7 +19,12 @@ import {
   DeleteRegular,
   DocumentPdfRegular,
 } from '@fluentui/react-icons';
-import { useRechnung, useCreateRechnung, useUpdateRechnung } from '../../hooks/useInvoices';
+import {
+  useRechnung,
+  useCreateRechnung,
+  useUpdateRechnung,
+  useRechnungPaymentSlip,
+} from '../../hooks/useInvoices';
 import { useRechnungsprofile } from '../../hooks/useInvoiceProfiles';
 import { useAppAuth } from '../../hooks/useAppAuth';
 import type {
@@ -77,6 +82,26 @@ const useStyles = makeStyles({
     marginTop: '12px',
     color: tokens.colorNeutralForeground1,
   },
+  paymentSlipCard: {
+    marginTop: '16px',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    padding: '12px',
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  paymentSlipActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  paymentSlipImage: {
+    marginTop: '12px',
+    maxWidth: '100%',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusSmall,
+    display: 'block',
+  },
 });
 
 const emptyPosition = (): RechnungspositionDto => ({
@@ -101,6 +126,9 @@ export const InvoiceForm: React.FunctionComponent = () => {
   useAppAuth();
 
   const { data: existing, isLoading: loadingRechnung } = useRechnung(id ?? '');
+  const { data: paymentSlipBlob, isLoading: isPaymentSlipLoading } = useRechnungPaymentSlip(
+    isNew ? '' : (id ?? ''),
+  );
   const { data: profile } = useRechnungsprofile();
   const createRechnung = useCreateRechnung();
   const updateRechnung = useUpdateRechnung();
@@ -178,6 +206,20 @@ export const InvoiceForm: React.FunctionComponent = () => {
   };
 
   const total = form.positionen.reduce((sum, p) => sum + p.preisTotal, 0);
+
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!paymentSlipBlob) {
+      setPaymentSlipUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(paymentSlipBlob);
+    setPaymentSlipUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [paymentSlipBlob]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -384,6 +426,51 @@ export const InvoiceForm: React.FunctionComponent = () => {
           Gesamt: {formatCHF(total)}
         </div>
       </div>
+
+      {!isNew && (
+        <>
+          <Divider />
+          <div className={styles.section} style={{ marginTop: '24px' }}>
+            <Text className={styles.sectionTitle}>Einzahlungsschein</Text>
+            <div className={styles.paymentSlipCard}>
+              {isPaymentSlipLoading && <Spinner label="Einzahlungsschein wird geladen…" size="tiny" />}
+
+              {!isPaymentSlipLoading && paymentSlipUrl && (
+                <>
+                  <div className={styles.paymentSlipActions}>
+                    <Button
+                      as="a"
+                      href={paymentSlipUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Einzahlungsschein öffnen
+                    </Button>
+                    <Button
+                      as="a"
+                      href={paymentSlipUrl}
+                      download={`qrbill-${id}.png`}
+                    >
+                      Einzahlungsschein herunterladen
+                    </Button>
+                  </div>
+                  <img
+                    className={styles.paymentSlipImage}
+                    src={paymentSlipUrl}
+                    alt="QR Einzahlungsschein"
+                  />
+                </>
+              )}
+
+              {!isPaymentSlipLoading && !paymentSlipUrl && (
+                <Text>
+                  Noch kein Einzahlungsschein verfügbar. Er wird beim Speichern mit vollständig erfassten Profil- und Empfängerdaten erzeugt.
+                </Text>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className={styles.actions}>
         <Button appearance="secondary" onClick={() => navigate('/invoices')}>

@@ -43,6 +43,23 @@ public class InvoicesFunction(
             return new OkObjectResult(invoice);
         });
 
+    [Function("Invoices_GetPaymentSlip")]
+    public async Task<IActionResult> GetPaymentSlip(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "invoices/{id}/payment-slip")] HttpRequest req,
+        string id) =>
+        await ExecuteAsUserAsync(req, async (_, meDto) =>
+        {
+            var qrBill = await _invoiceService.GetQrBillAsync(id, meDto.UserId, meDto.IsAdmin);
+            if (qrBill is null)
+                return new ObjectResult(new ErrorRecord("Der Einzahlungsschein wurde nicht gefunden.", 2102))
+                { StatusCode = StatusCodes.Status404NotFound };
+
+            return new FileContentResult(qrBill.Content, qrBill.ContentType)
+            {
+                FileDownloadName = qrBill.FileName,
+            };
+        });
+
     [Function("Invoices_Create")]
     public async Task<IActionResult> Create(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "invoices")] HttpRequest req) =>

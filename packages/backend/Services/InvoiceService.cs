@@ -1,13 +1,17 @@
 using EaglesJungscharen.Azure.BillingTool.Models.Dtos;
+using EaglesJungscharen.Azure.BillingTool.Models;
 using EaglesJungscharen.Azure.BillingTool.Models.Entities;
 using EaglesJungscharen.Azure.BillingTool.Models.Requests;
 using GuedesPlace.AzureTools.Tables;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace EaglesJungscharen.Azure.BillingTool.Services;
 
 public class InvoiceService(
-    [FromKeyedServices("BillingStorage")] ExtendedAzureTableClientService tableService) : IInvoiceService
+    [FromKeyedServices("BillingStorage")] ExtendedAzureTableClientService tableService,
+    IInvoiceQrBillService invoiceQrBillService,
+    ILogger<InvoiceService> logger) : IInvoiceService
 {
     private const string InvoicePartitionKey = "Invoice";
 
@@ -16,6 +20,9 @@ public class InvoiceService(
 
     private readonly TypedAzureTableClient<RechnungspositionEntity> _positionsTable =
         tableService.GetTypedTableClient<RechnungspositionEntity>();
+
+    private readonly IInvoiceQrBillService _invoiceQrBillService = invoiceQrBillService;
+    private readonly ILogger<InvoiceService> _logger = logger;
 
     public async Task<List<RechnungDto>> GetAllAsync(string userId, bool isAdmin)
     {
@@ -71,6 +78,9 @@ public class InvoiceService(
         await _invoiceTable.InsertOrReplaceAsync(rowKey: entity.Id, partitionKey: InvoicePartitionKey, entity);
 
         var positions = await SavePositionsAsync(entity.Id, request.Positionen);
+
+        await _invoiceQrBillService.TryGenerateAndStoreAsync(entity, positions);
+
         return ToDto(entity, positions);
     }
 
@@ -83,6 +93,9 @@ public class InvoiceService(
         var entity = existing.Entity;
         if (!isAdmin && entity.UserId != userId)
             return null;
+
+        var existingPositions = await LoadPositionsAsync(entity.Id);
+        var shouldRegenerateQrBill = HaveQrRelevantFieldsChanged(entity, request, existingPositions);
 
         entity.RechnungsprofilId = request.RechnungsprofilId;
         entity.Rechnungsnummer = request.Rechnungsnummer;
@@ -101,7 +114,30 @@ public class InvoiceService(
 
         await DeletePositionsAsync(entity.Id);
         var positions = await SavePositionsAsync(entity.Id, request.Positionen);
+
+        if (shouldRegenerateQrBill)
+        {
+            await _invoiceQrBillService.TryGenerateAndStoreAsync(entity, positions);
+        }
+        else
+        {
+            _logger.LogInformation("QR-Bill Neugenerierung übersprungen für Rechnung {InvoiceId}: Keine relevanten Änderungen.", entity.Id);
+        }
+
         return ToDto(entity, positions);
+    }
+
+    public async Task<QrBillFileResult?> GetQrBillAsync(string id, string userId, bool isAdmin)
+    {
+        var existing = await _invoiceTable.GetByIdAsync(id, InvoicePartitionKey);
+        if (existing is null)
+            return null;
+
+        var entity = existing.Entity;
+        if (!isAdmin && entity.UserId != userId)
+            return null;
+
+        return await _invoiceQrBillService.TryGetStoredAsync(id);
     }
 
     public async Task<bool> DeleteAsync(string id, string userId, bool isAdmin)
@@ -152,6 +188,75 @@ public class InvoiceService(
         var existing = await _positionsTable.GetAllAsync(invoiceId);
         foreach (var result in existing)
             await _positionsTable.DeleteEntityAsync(rowKey: result.Entity.Id, partitionKey: invoiceId);
+    }
+
+    private static bool HaveQrRelevantFieldsChanged(
+        RechnungEntity current,
+        CreateUpdateRechnungRequest request,
+        List<RechnungspositionEntity> existingPositions)
+    {
+        if (!string.Equals(current.RechnungsprofilId, request.RechnungsprofilId, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.Rechnungsnummer, request.Rechnungsnummer, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.RechnungsDatum, request.RechnungsDatum, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.EmpfaengerName, request.EmpfaengerName, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.EmpfaengerStrasse, request.EmpfaengerStrasse, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.EmpfaengerHausnummer, request.EmpfaengerHausnummer, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.EmpfaengerPlz, request.EmpfaengerPlz, StringComparison.Ordinal))
+            return true;
+
+        if (!string.Equals(current.EmpfaengerOrt, request.EmpfaengerOrt, StringComparison.Ordinal))
+            return true;
+
+        return ArePositionsDifferent(existingPositions, request.Positionen);
+    }
+
+    private static bool ArePositionsDifferent(
+        List<RechnungspositionEntity> existingPositions,
+        List<CreateUpdateRechnungspositionRequest> requestPositions)
+    {
+        if (existingPositions.Count != requestPositions.Count)
+            return true;
+
+        var left = existingPositions.OrderBy(p => p.Nummer).ToList();
+        var right = requestPositions.OrderBy(p => p.Nummer).ToList();
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            var existing = left[i];
+            var requested = right[i];
+
+            if (existing.Nummer != requested.Nummer)
+                return true;
+
+            if (!string.Equals(existing.Titel, requested.Titel, StringComparison.Ordinal))
+                return true;
+
+            if (!string.Equals(existing.Beschreibung, requested.Beschreibung, StringComparison.Ordinal))
+                return true;
+
+            if (!string.Equals(existing.Einheit, requested.Einheit, StringComparison.Ordinal))
+                return true;
+
+            if (existing.Anzahl != requested.Anzahl)
+                return true;
+
+            if (existing.PreisProEinheit != requested.PreisProEinheit)
+                return true;
+        }
+
+        return false;
     }
 
     private static RechnungDto ToDto(RechnungEntity e, List<RechnungspositionEntity> positions) =>

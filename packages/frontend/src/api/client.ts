@@ -43,3 +43,32 @@ export const authFetch = async <T>(
 
   return response.json() as Promise<T>;
 };
+
+export const authFetchBlob = async (
+  path: string,
+  token: string,
+  options: RequestInit = {},
+): Promise<Blob> => {
+  const url = `${API_BASE_URL}${path}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const body = await response.json();
+      message = body.message ?? body.error ?? message;
+    } catch {
+      // keep statusText
+    }
+    throw new ApiResponseError({ status: response.status, message });
+  }
+
+  return response.blob();
+};

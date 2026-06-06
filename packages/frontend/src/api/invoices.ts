@@ -1,4 +1,4 @@
-import { authFetch } from './client';
+import { authFetch, authFetchBlob } from './client';
 import type { RechnungDto, CreateUpdateRechnungData } from '@ct-billingtool/shared';
 
 export const fetchRechnungen = async (token: string): Promise<RechnungDto[]> =>
@@ -28,3 +28,6 @@ export const updateRechnung = async (
 
 export const deleteRechnung = async (token: string, id: string): Promise<void> =>
   authFetch<void>(`/api/invoices/${id}`, token, { method: 'DELETE' });
+
+export const fetchRechnungPaymentSlip = async (token: string, id: string): Promise<Blob> =>
+  authFetchBlob(`/api/invoices/${id}/payment-slip`, token);

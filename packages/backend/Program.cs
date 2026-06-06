@@ -5,6 +5,7 @@ using EaglesJungscharen.Azure.ChurchToolIDPServices.Extensions;
 using EaglesJungscharen.Azure.ChurchToolIDPServices.Middleware;
 using GuedesPlace.AzureTools.Configuration.Extensions;
 using GuedesPlace.AzureTools.Tables;
+using Azure.Storage.Blobs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +55,19 @@ if (!string.IsNullOrWhiteSpace(idpBaseUrl))
     });
 }
 
+var qrBillFunctionBaseUrl = builder.Configuration["QR_BILL_FUNCTION_BASE_URL"];
+var qrBillFunctionKey = builder.Configuration["QR_BILL_FUNCTION_KEY"];
+if (!string.IsNullOrWhiteSpace(qrBillFunctionBaseUrl)
+    && !string.IsNullOrWhiteSpace(qrBillFunctionKey))
+{
+    builder.Services.AddHttpClient("QrBillFunction", client =>
+    {
+        client.BaseAddress = new Uri(qrBillFunctionBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(20);
+        client.DefaultRequestHeaders.Add("x-functions-key", qrBillFunctionKey);
+    });
+}
+
 // JWT-Validierungs-Middleware via ChurchTool IDP
 builder.Services.AddChurchToolIDPServices(
     churchToolUrl: builder.Configuration["CHURCHTOOL_URL"]
@@ -77,8 +91,17 @@ billingTableService.CreateAndRegisterTableClient<RechnungspositionEntity>("Invoi
 
 builder.Services.AddKeyedSingleton<ExtendedAzureTableClientService>("BillingStorage", billingTableService);
 
+var qrBillContainerName = builder.Configuration["QR_BILL_CONTAINER_NAME"] ?? "invoice-qrbills";
+var qrBillStorageConnectionString =
+    builder.Configuration["QR_BILL_STORAGE_CONNECTION_STRING"]
+    ?? builder.Configuration["AzureWebJobsStorage"]
+    ?? throw new InvalidOperationException("AzureWebJobsStorage ist nicht konfiguriert.");
+
+builder.Services.AddSingleton(new BlobContainerClient(qrBillStorageConnectionString, qrBillContainerName));
+
 builder.Services.AddScoped<IInvoiceProfileService, InvoiceProfileService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IInvoiceQrBillService, InvoiceQrBillService>();
 
 builder.UseMiddleware<JwtValidationMiddleware>();
 builder.UseMiddleware<ChurchToolReferenceMiddleware>();

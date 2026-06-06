@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchRechnungen,
   fetchRechnung,
+  fetchRechnungPaymentSlip,
   createRechnung,
   updateRechnung,
   deleteRechnung,
@@ -31,14 +32,28 @@ export const useRechnung = (id: string) => {
   });
 };
 
+export const useRechnungPaymentSlip = (id: string) => {
+  const { token, isAuthenticated } = useAppAuth();
+
+  return useQuery({
+    queryKey: ['invoices', 'payment-slip', id],
+    queryFn: () => fetchRechnungPaymentSlip(token!, id),
+    enabled: isAuthenticated && !!token && !!id,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+};
+
 export const useCreateRechnung = () => {
   const { token } = useAppAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateUpdateRechnungData) => createRechnung(token!, data),
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', created.id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', 'payment-slip', created.id] });
     },
   });
 };
@@ -53,6 +68,7 @@ export const useUpdateRechnung = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoices', id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', 'payment-slip', id] });
     },
   });
 };
