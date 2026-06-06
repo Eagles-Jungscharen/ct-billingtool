@@ -4,6 +4,32 @@ This folder contains helper scripts for infrastructure management and automation
 
 ## Available Scripts
 
+### Infrastructure Deployment
+- **`deploy.ps1`** - Deploy Azure infrastructure and generate `infrastructure.local`
+
+  Deploys `infrastructure/azure/main.bicep` to a target resource group and writes deployment outputs
+  to `infrastructure.local` at repository root. This output file is intended for later frontend/backend
+  code deployments.
+
+  **Usage:**
+  ```powershell
+  .\deploy.ps1 `
+      -ResourceGroupName "rg-ct-billingtool" `
+      -EnvironmentName "prod" `
+      -Location "westeurope" `
+      -Prefix "ctbilling"
+  ```
+
+  **Optional parameters:**
+  - `-SubscriptionId` - set Azure subscription context before deployment
+  - `-EnableCdn` - enable/disable CDN module (default: `$true`)
+  - `-FrontendCustomDomain` - optional custom domain for CDN
+  - `-DeploymentName` - explicit deployment name
+
+  **Output file:**
+  - `infrastructure.local` (repository root)
+  - Contains deployment metadata and Bicep outputs (function app name/url, storage accounts, frontend URL)
+
 ### Custom Domain Setup
 - **`setup-custom-domains.ps1`** - Configure DNS records for custom domains
 

@@ -17,12 +17,15 @@ Azure deployment configurations using Infrastructure as Code (IaC).
 - Azure resource definitions (App Service, Azure Functions, Storage Accounts, etc.)
 - Environment-specific configurations
 
-### `/scripts` (Planned)
+### `/scripts`
 Helper scripts for infrastructure management.
 
 - Setup scripts for local development
-- Deployment automation scripts
+- Deployment automation scripts (for example: `deploy.ps1`)
 - Database migration scripts
+
+The script `scripts/deploy.ps1` deploys `azure/main.bicep` and writes deployment outputs to
+`infrastructure.local` in repository root so later code deployments can consume stable resource values.
 
 ## Local Development
 

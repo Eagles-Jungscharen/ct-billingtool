@@ -2,7 +2,8 @@
 
 This document outlines the deployment process for the ChurchTool Billing Tool to Azure.
 
-> ⚠️ **Note**: This is a planned deployment guide. The actual deployment process will be finalized as part of future work.
+The recommended infrastructure path is the repository script `infrastructure/scripts/deploy.ps1`,
+which deploys Bicep resources and writes `infrastructure.local` at repository root for later code deployments.
 
 ## Overview
 
@@ -28,13 +29,30 @@ Before deploying, ensure you have:
 
 ## Deployment Options
 
-### Option 1: Manual Deployment via Azure Portal
+### Option 1: Scripted Infrastructure Deployment (Recommended)
+
+Deploy infrastructure from repository root:
+
+```powershell
+./infrastructure/scripts/deploy.ps1 `
+  -ResourceGroupName "rg-ct-billingtool" `
+  -EnvironmentName "prod" `
+  -Location "westeurope" `
+  -Prefix "ctbilling"
+```
+
+Result:
+- Infrastructure is deployed via `infrastructure/azure/main.bicep`
+- `infrastructure.local` is created in repository root
+- `infrastructure.local` can be used by later frontend/backend deployment scripts to read resource names and URLs
+
+### Option 2: Manual Deployment via Azure Portal
 
 1. Create resources manually in Azure Portal
 2. Deploy frontend and backend using VS Code extensions or CLI
 3. Configure environment variables in Azure Portal
 
-### Option 2: Infrastructure as Code (Bicep)
+### Option 3: Infrastructure as Code (Bicep)
 
 Deploy all resources using Bicep templates:
 
@@ -43,10 +61,10 @@ cd infrastructure/azure
 az deployment group create \
   --resource-group rg-ct-billingtool \
   --template-file main.bicep \
-  --parameters environment=production
+  --parameters environmentName=prod prefix=ctbilling
 ```
 
-### Option 3: Infrastructure as Code (Terraform)
+### Option 4: Infrastructure as Code (Terraform)
 
 Deploy using Terraform:
 
@@ -57,7 +75,7 @@ terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
-### Option 4: CI/CD with GitHub Actions
+### Option 5: CI/CD with GitHub Actions
 
 Automated deployment triggered by pushes to main branch.
 
@@ -147,6 +165,10 @@ az cdn endpoint create \
 ```
 
 ### 2. Configure Environment Variables
+
+If `infrastructure.local` is available from the scripted deployment, reuse its values for
+`functionAppName`, `functionAppUrl`, `frontendStorageAccountName`, and frontend URL fields
+instead of hardcoding resource names.
 
 #### Backend (Azure Functions)
 
