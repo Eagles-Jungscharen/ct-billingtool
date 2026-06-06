@@ -1,13 +1,18 @@
 <#
 .SYNOPSIS
-    Deploys Azure infrastructure defined in infrastructure/azure and writes deployment outputs to infrastructure.local.
+    Deploys Azure infrastructure defined in infrastructure/azure and writes deployment outputs to a local infrastructure file.
 
 .DESCRIPTION
     This script deploys the Bicep template at infrastructure/azure/main.bicep to a given resource group.
-    After a successful deployment, it writes a machine-readable output file at repository root:
-    infrastructure.local
+    After a successful deployment, it writes a machine-readable output file at repository root.
 
     The file is intended to be consumed by later code deployment steps (frontend/backend).
+
+    Default output file:
+    - infrastructure.local
+
+    Optional environment-based naming:
+    - infrastructure.<environment>.local (for example: infrastructure.dev.local)
 
 .PARAMETER ResourceGroupName
     Name of the target Azure resource group.
@@ -33,11 +38,24 @@
 .PARAMETER DeploymentName
     Optional deployment name. If omitted, a timestamp-based name is generated.
 
+.PARAMETER OutputFile
+    Optional output file path for deployment outputs.
+    If this parameter is set, it takes precedence over UseEnvironmentOutputFile.
+
+.PARAMETER UseEnvironmentOutputFile
+    If set, output is written to infrastructure.<EnvironmentName>.local in repository root.
+
 .EXAMPLE
     ./deploy.ps1 -ResourceGroupName rg-ct-billingtool -EnvironmentName prod -Location westeurope -Prefix ctbilling
 
 .EXAMPLE
     ./deploy.ps1 -ResourceGroupName rg-ct-billingtool -EnvironmentName prod -Location westeurope -Prefix ctbilling -SubscriptionId 00000000-0000-0000-0000-000000000000 -EnableCdn $true
+
+.EXAMPLE
+    ./deploy.ps1 -ResourceGroupName rg-ct-billingtool -EnvironmentName dev -Location westeurope -Prefix ctbilling -UseEnvironmentOutputFile
+
+.EXAMPLE
+    ./deploy.ps1 -ResourceGroupName rg-ct-billingtool -EnvironmentName int -Location westeurope -Prefix ctbilling -OutputFile infrastructure.int.local
 #>
 
 [CmdletBinding()]
@@ -68,7 +86,13 @@ param(
     [string]$FrontendCustomDomain,
 
     [Parameter(Mandatory = $false)]
-    [string]$DeploymentName
+    [string]$DeploymentName,
+
+    [Parameter(Mandatory = $false)]
+    [string]$OutputFile,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$UseEnvironmentOutputFile
 )
 
 Set-StrictMode -Version 3.0
@@ -108,7 +132,22 @@ function Invoke-AzCli {
 # Ermittelt den Repository-Root relativ zum Skriptpfad.
 $repoRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
 $templatePath = Join-Path -Path $repoRoot -ChildPath 'infrastructure/azure/main.bicep'
-$outputPath = Join-Path -Path $repoRoot -ChildPath 'infrastructure.local'
+
+# Ermittelt die Zieldatei fuer Deployment-Outputs mit klarer Prioritaet.
+if (-not [string]::IsNullOrWhiteSpace($OutputFile)) {
+    if ([System.IO.Path]::IsPathRooted($OutputFile)) {
+        $outputPath = $OutputFile
+    }
+    else {
+        $outputPath = Join-Path -Path $repoRoot -ChildPath $OutputFile
+    }
+}
+elseif ($UseEnvironmentOutputFile.IsPresent) {
+    $outputPath = Join-Path -Path $repoRoot -ChildPath "infrastructure.$EnvironmentName.local"
+}
+else {
+    $outputPath = Join-Path -Path $repoRoot -ChildPath 'infrastructure.local'
+}
 
 if (-not (Test-Path -Path $templatePath)) {
     throw "Bicep template was not found: $templatePath"
@@ -176,7 +215,7 @@ $deploymentRaw = Invoke-AzCli -Arguments $deploymentArgs
 $deployment = $deploymentRaw | ConvertFrom-Json -Depth 30
 
 if (-not $deployment.properties -or -not $deployment.properties.outputs) {
-    throw 'Deployment did not return outputs. infrastructure.local cannot be generated.'
+    throw 'Deployment did not return outputs. Output file cannot be generated.'
 }
 
 $outputs = $deployment.properties.outputs
@@ -216,9 +255,15 @@ $resultObject = [ordered]@{
 }
 
 $json = $resultObject | ConvertTo-Json -Depth 20
+
+$outputDirectory = Split-Path -Path $outputPath -Parent
+if (-not [string]::IsNullOrWhiteSpace($outputDirectory) -and -not (Test-Path -Path $outputDirectory)) {
+    New-Item -Path $outputDirectory -ItemType Directory -Force | Out-Null
+}
+
 Set-Content -Path $outputPath -Value $json -Encoding utf8
 
 Write-Success 'Infrastructure deployment completed successfully.'
 Write-Success "Deployment name: $DeploymentName"
 Write-Success "Output file written: $outputPath"
-Write-WarningText 'Use infrastructure.local as the source for later code deployment steps.'
+Write-WarningText "Use '$outputPath' as the source for later code deployment steps."

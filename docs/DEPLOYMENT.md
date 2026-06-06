@@ -41,10 +41,36 @@ Deploy infrastructure from repository root:
   -Prefix "ctbilling"
 ```
 
+For multi-environment setups, generate an environment-specific output file:
+
+```powershell
+./infrastructure/scripts/deploy.ps1 `
+  -ResourceGroupName "rg-ct-billingtool-dev" `
+  -EnvironmentName "dev" `
+  -Location "westeurope" `
+  -Prefix "ctbilling" `
+  -UseEnvironmentOutputFile
+```
+
 Result:
 - Infrastructure is deployed via `infrastructure/azure/main.bicep`
-- `infrastructure.local` is created in repository root
-- `infrastructure.local` can be used by later frontend/backend deployment scripts to read resource names and URLs
+- By default, `infrastructure.local` is created in repository root
+- With `-UseEnvironmentOutputFile`, `infrastructure.<environment>.local` is created
+- The generated file can be used by later frontend/backend deployment scripts to read resource names and URLs
+
+Code deployment using the generated file:
+
+```powershell
+./infrastructure/scripts/deploy-code.ps1
+```
+
+For multiple environments, pass a different parameter file:
+
+```powershell
+./infrastructure/scripts/deploy-code.ps1 -ParameterFile "infrastructure.dev.local"
+./infrastructure/scripts/deploy-code.ps1 -ParameterFile "infrastructure.int.local"
+./infrastructure/scripts/deploy-code.ps1 -ParameterFile "infrastructure.prod.local"
+```
 
 ### Option 2: Manual Deployment via Azure Portal
 

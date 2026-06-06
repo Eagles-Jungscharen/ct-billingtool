@@ -5,10 +5,10 @@ This folder contains helper scripts for infrastructure management and automation
 ## Available Scripts
 
 ### Infrastructure Deployment
-- **`deploy.ps1`** - Deploy Azure infrastructure and generate `infrastructure.local`
+- **`deploy.ps1`** - Deploy Azure infrastructure and generate a local infrastructure file
 
   Deploys `infrastructure/azure/main.bicep` to a target resource group and writes deployment outputs
-  to `infrastructure.local` at repository root. This output file is intended for later frontend/backend
+  to a local file at repository root. This output file is intended for later frontend/backend
   code deployments.
 
   **Usage:**
@@ -20,15 +20,69 @@ This folder contains helper scripts for infrastructure management and automation
       -Prefix "ctbilling"
   ```
 
+  **Usage (environment output file):**
+  ```powershell
+  .\deploy.ps1 `
+      -ResourceGroupName "rg-ct-billingtool" `
+      -EnvironmentName "dev" `
+      -Location "westeurope" `
+      -Prefix "ctbilling" `
+      -UseEnvironmentOutputFile
+  ```
+
+  **Usage (explicit output file):**
+  ```powershell
+  .\deploy.ps1 `
+      -ResourceGroupName "rg-ct-billingtool" `
+      -EnvironmentName "int" `
+      -Location "westeurope" `
+      -Prefix "ctbilling" `
+      -OutputFile "infrastructure.int.local"
+  ```
+
   **Optional parameters:**
   - `-SubscriptionId` - set Azure subscription context before deployment
   - `-EnableCdn` - enable/disable CDN module (default: `$true`)
   - `-FrontendCustomDomain` - optional custom domain for CDN
   - `-DeploymentName` - explicit deployment name
+  - `-UseEnvironmentOutputFile` - writes `infrastructure.<environment>.local`
+  - `-OutputFile` - explicit output file path (has priority over `-UseEnvironmentOutputFile`)
 
   **Output file:**
-  - `infrastructure.local` (repository root)
+  - default: `infrastructure.local` (repository root)
+  - environment mode: `infrastructure.<environment>.local` (for example `infrastructure.dev.local`)
   - Contains deployment metadata and Bicep outputs (function app name/url, storage accounts, frontend URL)
+
+### Code Deployment
+- **`deploy-code.ps1`** - Deploy frontend/backend code using infrastructure output file
+
+  Reads infrastructure values from `infrastructure.local` (or another file passed via `-ParameterFile`)
+  and deploys code to existing Azure resources.
+
+  **Usage (all):**
+  ```powershell
+  .\deploy-code.ps1
+  ```
+
+  **Usage (specific environment file):**
+  ```powershell
+  .\deploy-code.ps1 -ParameterFile "infrastructure.dev.local"
+  .\deploy-code.ps1 -ParameterFile "infrastructure.int.local"
+  .\deploy-code.ps1 -ParameterFile "infrastructure.prod.local"
+  ```
+
+  **Usage (target selection):**
+  ```powershell
+  .\deploy-code.ps1 -Target Frontend
+  .\deploy-code.ps1 -Target Backend
+  .\deploy-code.ps1 -Target All
+  ```
+
+  **Optional parameters:**
+  - `-ParameterFile` (Alias: `-InfrastructureFile`) - alternative infra file path
+  - `-SkipBuild` - deploy existing artifacts without running build
+  - `-FrontendDistPath` - custom frontend dist path
+  - `-BackendPath` - custom backend path
 
 ### Custom Domain Setup
 - **`setup-custom-domains.ps1`** - Configure DNS records for custom domains
