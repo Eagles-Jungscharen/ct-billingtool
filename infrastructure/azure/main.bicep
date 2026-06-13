@@ -42,6 +42,33 @@ param appInsightsName string = ''
 @description('Optional explicit Log Analytics Workspace name. Leave empty to auto-generate.')
 param logAnalyticsWorkspaceName string = ''
 
+@description('ChurchTools base URL used by the backend.')
+param churchToolUrl string
+
+@description('OIDC authority URL for JWT validation in backend.')
+param oidcAuthorityUrl string
+
+@description('Storage connection string used by ChurchTool IDP integration.')
+@secure()
+param churchToolIdpStorageConnectionString string
+
+@description('Base URL of the ChurchTool IDP Functions endpoint.')
+param churchToolIdpBaseUrl string
+
+@description('Function key for ChurchTool IDP Functions endpoint.')
+@secure()
+param churchToolIdpFunctionKey string
+
+@description('ChurchTool group id that grants admin access.')
+param churchToolAdminGroupId string
+
+@description('Optional QR bill function base URL. Leave empty to disable QR bill generation calls.')
+param qrBillFunctionBaseUrl string = ''
+
+@description('Optional QR bill function key. Leave empty to disable QR bill generation calls.')
+@secure()
+param qrBillFunctionKey string = ''
+
 var frontendStorageName = empty(frontendStorageAccountName)
   ? toLower(take('${prefix}${environmentName}web${uniqueString(resourceGroup().id)}', 24))
   : toLower(frontendStorageAccountName)
@@ -75,15 +102,6 @@ module storageStaticWebsite './modules/storage-static-website.bicep' = {
   }
 }
 
-module storageData './modules/storage-data.bicep' = {
-  name: 'storage-data-${environmentName}'
-  params: {
-    location: location
-    storageAccountName: dataStorageName
-    tags: tags
-  }
-}
-
 module monitoring './modules/monitoring.bicep' = {
   name: 'monitoring-${environmentName}'
   params: {
@@ -100,7 +118,15 @@ module functionApp './modules/function-app.bicep' = {
     location: location
     functionAppName: finalFunctionAppName
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
-    dataStorageConnectionString: storageData.outputs.connectionString
+    churchToolUrl: churchToolUrl
+    oidcAuthorityUrl: oidcAuthorityUrl
+    churchToolIdpStorageConnectionString: churchToolIdpStorageConnectionString
+    churchToolIdpBaseUrl: churchToolIdpBaseUrl
+    churchToolIdpFunctionKey: churchToolIdpFunctionKey
+    churchToolAdminGroupId: churchToolAdminGroupId
+    qrBillFunctionBaseUrl: qrBillFunctionBaseUrl
+    qrBillFunctionKey: qrBillFunctionKey
+    runtimeStorageAccountName: dataStorageName
     tags: tags
   }
 }
@@ -119,7 +145,7 @@ module cdn './modules/cdn.bicep' = if (enableCdn) {
 
 output frontendStorageAccountName string = storageStaticWebsite.outputs.storageAccountName
 output frontendWebsiteUrl string = storageStaticWebsite.outputs.primaryWebEndpoint
-output dataStorageAccountName string = storageData.outputs.storageAccountName
+output dataStorageAccountName string = functionApp.outputs.runtimeStorageAccountName
 output functionAppName string = functionApp.outputs.functionAppName
 output functionAppUrl string = 'https://${functionApp.outputs.defaultHostName}'
 output applicationInsightsName string = monitoring.outputs.appInsightsName

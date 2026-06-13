@@ -91,13 +91,9 @@ billingTableService.CreateAndRegisterTableClient<RechnungspositionEntity>("Invoi
 
 builder.Services.AddKeyedSingleton<ExtendedAzureTableClientService>("BillingStorage", billingTableService);
 
-var qrBillContainerName = builder.Configuration["QR_BILL_CONTAINER_NAME"] ?? "invoice-qrbills";
-var qrBillStorageConnectionString =
-    builder.Configuration["QR_BILL_STORAGE_CONNECTION_STRING"]
-    ?? builder.Configuration["AzureWebJobsStorage"]
-    ?? throw new InvalidOperationException("AzureWebJobsStorage ist nicht konfiguriert.");
+var qrBillStorageConnectionString = builder.Configuration["AzureWebJobsStorage"] ?? throw new InvalidOperationException("AzureWebJobsStorage ist nicht konfiguriert.");
 
-builder.Services.AddSingleton(new BlobContainerClient(qrBillStorageConnectionString, qrBillContainerName));
+builder.Services.AddSingleton(new BlobContainerClient(qrBillStorageConnectionString, "invoice-qrbills"));
 
 builder.Services.AddScoped<IInvoiceProfileService, InvoiceProfileService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();

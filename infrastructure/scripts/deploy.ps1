@@ -45,6 +45,36 @@
 .PARAMETER UseEnvironmentOutputFile
     If set, output is written to infrastructure.<EnvironmentName>.local in repository root.
 
+.PARAMETER ChurchToolUrl
+    ChurchTools base URL used by the backend (for example: https://your-church.church.tools).
+
+.PARAMETER OidcAuthorityUrl
+    OIDC authority URL for JWT validation in backend.
+
+.PARAMETER ChurchToolIdpStorageConnectionString
+    Storage connection string used by ChurchTool IDP integration.
+
+.PARAMETER ChurchToolIdpBaseUrl
+    Base URL of the ChurchTool IDP Functions endpoint.
+
+.PARAMETER ChurchToolIdpFunctionKey
+    Function key for ChurchTool IDP Functions endpoint.
+
+.PARAMETER ChurchToolAdminGroupId
+    ChurchTool group id that grants admin access.
+
+.PARAMETER QrBillFunctionBaseUrl
+    Optional QR bill function base URL. Leave empty to disable QR bill generation calls.
+
+.PARAMETER QrBillFunctionKey
+    Optional QR bill function key.
+
+.PARAMETER QrBillContainerName
+    Blob container name for QR bill files. Defaults to 'invoice-qrbills'.
+
+.PARAMETER QrBillStorageConnectionString
+    Optional storage connection string for QR bill blobs. Uses runtime storage when omitted.
+
 .EXAMPLE
     ./deploy.ps1 -ResourceGroupName rg-ct-billingtool -EnvironmentName prod -Location westeurope -Prefix ctbilling
 
@@ -79,7 +109,7 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$SubscriptionId,
 
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $true)]
     [bool]$EnableCdn = $true,
 
     [Parameter(Mandatory = $false)]
@@ -92,7 +122,42 @@ param(
     [string]$OutputFile,
 
     [Parameter(Mandatory = $false)]
-    [switch]$UseEnvironmentOutputFile
+    [switch]$UseEnvironmentOutputFile,
+
+    # ChurchTool / OIDC Pflichtparameter
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ChurchToolUrl,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$OidcAuthorityUrl,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ChurchToolIdpStorageConnectionString,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ChurchToolIdpBaseUrl,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ChurchToolIdpFunctionKey,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$ChurchToolAdminGroupId,
+
+    # QR-Bill Parameter
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$QrBillFunctionBaseUrl,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$QrBillFunctionKey
+
 )
 
 Set-StrictMode -Version 3.0
@@ -189,6 +254,14 @@ $deploymentParameters = @(
     "location=$Location"
     "prefix=$Prefix"
     "enableCdn=$enableCdnValue"
+    "churchToolUrl=$ChurchToolUrl"
+    "oidcAuthorityUrl=$OidcAuthorityUrl"
+    "churchToolIdpStorageConnectionString=$ChurchToolIdpStorageConnectionString"
+    "churchToolIdpBaseUrl=$ChurchToolIdpBaseUrl"
+    "churchToolIdpFunctionKey=$ChurchToolIdpFunctionKey"
+    "churchToolAdminGroupId=$ChurchToolAdminGroupId"
+    "qrBillFunctionBaseUrl=$QrBillFunctionBaseUrl"
+    "qrBillFunctionKey=$QrBillFunctionKey"
 )
 
 if (-not [string]::IsNullOrWhiteSpace($FrontendCustomDomain)) {
