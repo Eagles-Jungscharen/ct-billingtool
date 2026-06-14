@@ -69,6 +69,20 @@ resource runtimeStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = 
   }
 }
 
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: runtimeStorageAccount
+  name: 'default'
+}
+
+// Pflicht-Container fuer Flex Consumption Deployment-Pakete
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: 'function-releases'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 resource hostingPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: planName
   location: location
